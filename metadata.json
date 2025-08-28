@@ -1,0 +1,5 @@
+{
+  "name": "AI Comic Factory",
+  "description": "A one-click comic generation application that transforms your text descriptions into a multi-page comic book. Simply provide a story idea, choose a style, and optionally define a character with an image or text to generate a 10-page comic with a book-like page-turning experience.",
+  "requestFramePermissions": []
+}
