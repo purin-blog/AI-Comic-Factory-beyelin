@@ -110,11 +110,27 @@ export const generateComicStory = async (params: GenerationParams) => {
           outputMimeType: 'image/jpeg',
           aspectRatio: '4:3',
         },
-      }).then(response => ({
-        pageNumber: index + 1,
-        text: page.pageText,
-        imageUrl: `data:image/jpeg;base64,${response.generatedImages[0].image.imageBytes}`,
-      }));
+      }).then(response => {
+        // Add proper error checking for the response structure
+        if (!response || !response.generatedImages || response.generatedImages.length === 0) {
+          throw new Error(`Failed to generate image for page ${index + 1}: No images returned`);
+        }
+        
+        const generatedImage = response.generatedImages[0];
+        if (!generatedImage || !generatedImage.image || !generatedImage.image.imageBytes) {
+          throw new Error(`Failed to generate image for page ${index + 1}: Invalid image data structure`);
+        }
+        
+        return {
+          pageNumber: index + 1,
+          text: page.pageText,
+          imageUrl: `data:image/jpeg;base64,${generatedImage.image.imageBytes}`,
+        };
+      }).catch(error => {
+        console.error(`Error generating image for page ${index + 1}:`, error);
+        // Return a placeholder or retry logic could be added here
+        throw new Error(`Failed to generate image for page ${index + 1}: ${error.message}`);
+      });
     });
 
     const comicPages = await Promise.all(imageGenerationPromises);

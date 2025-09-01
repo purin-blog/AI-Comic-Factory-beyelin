@@ -9,20 +9,41 @@ interface ComicBookProps {
 }
 
 const ComicBook: React.FC<ComicBookProps> = ({ pages, onReset }) => {
-  const [currentPage, setCurrentPage] = useState(0);
+  const [currentSpread, setCurrentSpread] = useState(0);
   const totalPages = pages.length;
+  
+  // Calculate total spreads: first page alone + remaining pages in pairs
+  const totalSpreads = Math.ceil((totalPages - 1) / 2) + (totalPages > 0 ? 1 : 0);
 
   const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 2);
+    if (currentSpread < totalSpreads - 1) {
+      setCurrentSpread(currentSpread + 1);
     }
   };
 
   const handlePrevPage = () => {
-    if (currentPage > 0) {
-      setCurrentPage(currentPage - 2);
+    if (currentSpread > 0) {
+      setCurrentSpread(currentSpread - 1);
     }
   };
+  
+  // Get pages for current spread
+  const getCurrentSpreadPages = () => {
+    if (currentSpread === 0) {
+      // First spread: only right page (page 1)
+      return { leftPage: null, rightPage: pages[0] || null };
+    } else {
+      // Subsequent spreads: pairs of pages
+      const leftPageIndex = (currentSpread - 1) * 2 + 1;
+      const rightPageIndex = leftPageIndex + 1;
+      return {
+        leftPage: pages[leftPageIndex] || null,
+        rightPage: pages[rightPageIndex] || null
+      };
+    }
+  };
+  
+  const { leftPage, rightPage } = getCurrentSpreadPages();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -32,75 +53,52 @@ const ComicBook: React.FC<ComicBookProps> = ({ pages, onReset }) => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, totalPages]);
+  }, [currentSpread, totalSpreads]);
   
   const Page = ({ page, side }: { page: ComicPage, side: 'left' | 'right' }) => (
-    <div className={`w-1/2 h-full flex flex-col ${side === 'left' ? 'items-end' : 'items-start'}`}>
-      <div className="w-full h-full bg-gray-100 shadow-inner flex flex-col">
-        {side === 'left' && <img src={page.imageUrl} alt={`Page ${page.pageNumber}`} className="w-full h-3/5 object-cover" />}
-        <div className="p-4 sm:p-6 flex-grow text-gray-800 text-sm sm:text-base overflow-y-auto">
-          {page.text}
-        </div>
-        <div className="text-center text-xs text-gray-500 p-2 border-t border-gray-300">{page.pageNumber}</div>
-        {side === 'right' && <img src={page.imageUrl} alt={`Page ${page.pageNumber}`} className="w-full h-3/5 object-cover" />}
+    <div className="w-full h-full bg-white shadow-inner flex flex-col">
+      <img 
+        src={page.imageUrl} 
+        alt={`Page ${page.pageNumber}`} 
+        className="w-full h-3/5 object-cover border-b border-gray-200" 
+      />
+      <div className="p-4 sm:p-6 flex-grow text-gray-800 text-sm sm:text-base overflow-y-auto leading-relaxed">
+        {page.text}
+      </div>
+      <div className={`text-xs text-gray-500 p-2 border-t border-gray-200 ${
+        side === 'left' ? 'text-left' : 'text-right'
+      }`}>
+        {page.pageNumber}
       </div>
     </div>
   );
 
   return (
     <div className="w-full max-w-5xl flex flex-col items-center">
-      <div className="relative w-full aspect-[2/1.2]" style={{ perspective: '2000px' }}>
-        {pages.map((page, index) => {
-          const isEven = index % 2 === 0;
-          const isVisible = index === currentPage || index === currentPage + 1;
-          const isFlipped = index < currentPage;
-
-          if (!isVisible) return null;
-
-          return (
-            <div
-              key={page.pageNumber}
-              className="absolute w-full h-full transition-transform duration-1000"
-              style={{
-                transformStyle: 'preserve-3d',
-                transformOrigin: isEven ? 'right center' : 'left center',
-                transform: isFlipped ? 'rotateY(-180deg)' : 'rotateY(0deg)',
-                zIndex: isFlipped ? index : totalPages - index,
-              }}
-            >
-              <div className="absolute w-full h-full flex" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
-                {isEven ? (
-                  // Front of a spread (left blank, right page)
-                  <>
-                    <div className="w-1/2 h-full bg-gray-100 shadow-inner" />
-                    {pages[index] && <Page page={pages[index]} side="right" />}
-                  </>
-                ) : (
-                   // Back of a spread (left page, right blank)
-                  <>
-                    {pages[index] && <Page page={pages[index]} side="left" />}
-                    <div className="w-1/2 h-full bg-gray-100 shadow-inner" />
-                  </>
-                )}
+      <div className="relative w-full aspect-[2/1.2] bg-gray-200 rounded-lg shadow-2xl overflow-hidden">
+        <div className="w-full h-full flex">
+          {/* Left Page */}
+          <div className="w-1/2 h-full border-r border-gray-300">
+            {leftPage ? (
+              <Page page={leftPage} side="left" />
+            ) : (
+              <div className="w-full h-full bg-gray-100 shadow-inner flex items-center justify-center">
+                <div className="text-gray-400 text-lg font-serif">AI Comic Factory</div>
               </div>
-              <div className="absolute w-full h-full flex" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
-                 {isEven ? (
-                    // Back of a spread (left page, right blank)
-                  <>
-                    {pages[index+1] && <Page page={pages[index+1]} side="left" />}
-                    <div className="w-1/2 h-full bg-gray-100 shadow-inner" />
-                  </>
-                ) : (
-                  // Front of a spread (left blank, right page)
-                  <>
-                    <div className="w-1/2 h-full bg-gray-100 shadow-inner" />
-                    {pages[index-1] && <Page page={pages[index-1]} side="right" />}
-                  </>
-                )}
+            )}
+          </div>
+          
+          {/* Right Page */}
+          <div className="w-1/2 h-full">
+            {rightPage ? (
+              <Page page={rightPage} side="right" />
+            ) : (
+              <div className="w-full h-full bg-gray-100 shadow-inner flex items-center justify-center">
+                <div className="text-gray-400 text-lg font-serif">End</div>
               </div>
-            </div>
-          );
-        })}
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="flex items-center justify-center space-x-4 mt-6">
@@ -113,17 +111,28 @@ const ComicBook: React.FC<ComicBookProps> = ({ pages, onReset }) => {
         </button>
         <button
           onClick={handlePrevPage}
-          disabled={currentPage === 0}
+          disabled={currentSpread === 0}
           className="p-3 bg-indigo-600 hover:bg-indigo-700 rounded-full disabled:bg-gray-500 disabled:cursor-not-allowed transition-colors duration-300"
         >
           <LeftArrowIcon className="w-6 h-6" />
         </button>
         <span className="text-lg font-semibold tabular-nums">
-          Pages {Math.min(currentPage + 1, totalPages)}-{Math.min(currentPage + 2, totalPages)} / {totalPages}
+          {currentSpread === 0 ? (
+            `Page 1 / ${totalPages}`
+          ) : (
+            (() => {
+              const leftPageNum = (currentSpread - 1) * 2 + 2;
+              const rightPageNum = leftPageNum + 1;
+              const displayPages = [];
+              if (leftPage) displayPages.push(leftPageNum);
+              if (rightPage) displayPages.push(rightPageNum);
+              return `Page${displayPages.length > 1 ? 's' : ''} ${displayPages.join('-')} / ${totalPages}`;
+            })()
+          )}
         </span>
         <button
           onClick={handleNextPage}
-          disabled={currentPage >= totalPages - 2}
+          disabled={currentSpread >= totalSpreads - 1}
           className="p-3 bg-indigo-600 hover:bg-indigo-700 rounded-full disabled:bg-gray-500 disabled:cursor-not-allowed transition-colors duration-300"
         >
           <RightArrowIcon className="w-6 h-6" />
