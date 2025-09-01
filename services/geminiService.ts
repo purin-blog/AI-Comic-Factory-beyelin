@@ -103,7 +103,8 @@ export const generateComicStory = async (params: GenerationParams) => {
     const imageGenerationPromises = storyPages.map((page, index) => {
       onProgress(`Generating image for page ${index + 1}/${MAX_PAGES}...`);
       return ai.models.generateImages({
-        model: 'imagen-4.0-generate-001',
+        // model: 'imagen-4.0-generate-001',
+        model: 'gemini-2.5-flash-image-preview',
         prompt: page.imagePrompt,
         config: {
           numberOfImages: 1,
