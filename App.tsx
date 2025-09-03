@@ -1,6 +1,6 @@
 
 import React, { useState, useCallback } from 'react';
-import type { ComicPage, ComicStyle } from './types';
+import type { ComicPage, ComicStyle, ImageModel } from './types';
 import { generateComicStory } from './services/geminiService';
 import ComicGeneratorForm from './components/ComicGeneratorForm';
 import LoadingIndicator from './components/LoadingIndicator';
@@ -18,7 +18,8 @@ const App: React.FC = () => {
     style: ComicStyle,
     customStyle: string,
     characterImage: File | null,
-    characterDesc: string
+    characterDesc: string,
+    imageModel: ImageModel
   ) => {
     setIsLoading(true);
     setError(null);
@@ -31,6 +32,7 @@ const App: React.FC = () => {
         customStyle,
         characterImage,
         characterDesc,
+        imageModel,
         onProgress: setLoadingMessage,
         onComplete: (pages) => {
           setComicPages(pages);

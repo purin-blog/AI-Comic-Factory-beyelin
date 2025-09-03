@@ -1,6 +1,6 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
-import type { ComicStyle } from '../types';
+import type { ComicStyle, ImageModel } from '../types';
 import { COMIC_STYLES } from '../constants';
 import { UploadIcon, SparklesIcon } from './Icons';
 
@@ -10,7 +10,8 @@ interface ComicGeneratorFormProps {
     style: ComicStyle,
     customStyle: string,
     characterImage: File | null,
-    characterDesc: string
+    characterDesc: string,
+    imageModel: ImageModel
   ) => void;
   disabled: boolean;
 }
@@ -22,6 +23,7 @@ const ComicGeneratorForm: React.FC<ComicGeneratorFormProps> = ({ onGenerate, dis
   const [characterImage, setCharacterImage] = useState<File | null>(null);
   const [characterDesc, setCharacterDesc] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageModel, setImageModel] = useState<ImageModel>('imagen-4.0');
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -43,7 +45,7 @@ const ComicGeneratorForm: React.FC<ComicGeneratorFormProps> = ({ onGenerate, dis
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (prompt.trim()) {
-      onGenerate(prompt, style, customStyle, characterImage, characterDesc);
+      onGenerate(prompt, style, customStyle, characterImage, characterDesc, imageModel);
     }
   };
   
@@ -134,6 +136,27 @@ const ComicGeneratorForm: React.FC<ComicGeneratorFormProps> = ({ onGenerate, dis
             />
           </div>
         )}
+
+        <div>
+          <label htmlFor="image-model" className="block text-lg font-medium text-indigo-300 mb-2">
+            Image Generation Model
+          </label>
+          <select
+            id="image-model"
+            value={imageModel}
+            onChange={(e) => setImageModel(e.target.value as ImageModel)}
+            className="w-full p-3 bg-gray-900 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-300"
+          >
+            <option value="imagen-4.0">Imagen 4.0 (Recommended)</option>
+            <option value="gemini-2.5-flash-image-preview">Gemini 2.5 Flash Image Preview</option>
+          </select>
+          <p className="text-sm text-gray-400 mt-1">
+            {imageModel === 'imagen-4.0' 
+              ? 'High-quality image generation with consistent style rendering'
+              : 'Experimental model with text+image input support'
+            }
+          </p>
+        </div>
 
         <div>
           <button

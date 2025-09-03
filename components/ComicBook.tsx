@@ -57,12 +57,15 @@ const ComicBook: React.FC<ComicBookProps> = ({ pages, onReset }) => {
   
   const Page = ({ page, side }: { page: ComicPage, side: 'left' | 'right' }) => (
     <div className="w-full h-full bg-white shadow-inner flex flex-col">
-      <img 
-        src={page.imageUrl} 
-        alt={`Page ${page.pageNumber}`} 
-        className="w-full h-3/5 object-cover border-b border-gray-200" 
-      />
-      <div className="p-4 sm:p-6 flex-grow text-gray-800 text-sm sm:text-base overflow-y-auto leading-relaxed">
+      <div className="p-3 sm:p-4">
+        <img 
+          src={page.imageUrl} 
+          alt={`Page ${page.pageNumber}`} 
+          className="w-full h-auto object-cover rounded-lg shadow-sm" 
+          style={{ aspectRatio: '4/3' }}
+        />
+      </div>
+      <div className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2 flex-grow text-gray-800 text-sm sm:text-base overflow-y-auto leading-relaxed">
         {page.text}
       </div>
       <div className={`text-xs text-gray-500 p-2 border-t border-gray-200 ${

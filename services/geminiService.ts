@@ -26,7 +26,7 @@ const storySchema = {
     properties: {
       pageText: {
         type: Type.STRING,
-        description: `Narrative text for this comic page. It should describe the scene, action, or dialogue.`,
+        description: `Narrative text for this comic page in Chinese. It should describe the scene, action, or dialogue in Chinese.`,
       },
       imagePrompt: {
         type: Type.STRING,
@@ -38,7 +38,7 @@ const storySchema = {
 };
 
 export const generateComicStory = async (params: GenerationParams) => {
-  const { prompt, style, customStyle, characterImage, characterDesc, onProgress, onComplete, onError } = params;
+  const { prompt, style, customStyle, characterImage, characterDesc, imageModel, onProgress, onComplete, onError } = params;
 
   try {
     onProgress('Analyzing your story idea...');
@@ -74,13 +74,14 @@ export const generateComicStory = async (params: GenerationParams) => {
 
       Instructions:
       1.  Create a compelling story arc that spans exactly ${MAX_PAGES} pages.
-      2.  For each page, write a short narrative text ("pageText").
-      3.  For each page, create a highly detailed visual prompt ("imagePrompt") for an AI image generator. This prompt must include:
+      2.  For each page, write a short narrative text ("pageText") in Chinese. The text should describe the scene, action, or dialogue in Chinese.
+      3.  For each page, create a highly detailed visual prompt ("imagePrompt") for an AI image generator in English. This prompt must include:
           - The character described above, ensuring their appearance is consistent.
           - The scene's background and setting.
           - The character's action and emotion.
           - The overall art style of "${stylePrompt}".
       4. Ensure the story is coherent and the narrative progresses logically from one page to the next.
+      5. IMPORTANT: pageText must be in Chinese, imagePrompt must be in English.
     `;
 
     const storyResponse = await ai.models.generateContent({
@@ -102,36 +103,72 @@ export const generateComicStory = async (params: GenerationParams) => {
 
     const imageGenerationPromises = storyPages.map((page, index) => {
       onProgress(`Generating image for page ${index + 1}/${MAX_PAGES}...`);
-      return ai.models.generateImages({
-        // model: 'imagen-4.0-generate-001',
-        model: 'gemini-2.5-flash-image-preview',
-        prompt: page.imagePrompt,
-        config: {
-          numberOfImages: 1,
-          outputMimeType: 'image/jpeg',
-          aspectRatio: '4:3',
-        },
-      }).then(response => {
-        // Add proper error checking for the response structure
-        if (!response || !response.generatedImages || response.generatedImages.length === 0) {
-          throw new Error(`Failed to generate image for page ${index + 1}: No images returned`);
-        }
+      
+      if (imageModel === 'imagen-4.0') {
+        return ai.models.generateImages({
+          model: 'imagen-4.0-generate-001',
+          prompt: page.imagePrompt,
+          config: {
+            numberOfImages: 1,
+            outputMimeType: 'image/jpeg',
+            aspectRatio: '4:3',
+          },
+        }).then(response => {
+          // Add proper error checking for the response structure
+          if (!response || !response.generatedImages || response.generatedImages.length === 0) {
+            throw new Error(`Failed to generate image for page ${index + 1}: No images returned`);
+          }
+          
+          const generatedImage = response.generatedImages[0];
+          if (!generatedImage || !generatedImage.image || !generatedImage.image.imageBytes) {
+            throw new Error(`Failed to generate image for page ${index + 1}: Invalid image data structure`);
+          }
+          
+          return {
+            pageNumber: index + 1,
+            text: page.pageText,
+            imageUrl: `data:image/jpeg;base64,${generatedImage.image.imageBytes}`,
+          };
+        }).catch(error => {
+          console.error(`Error generating image for page ${index + 1}:`, error);
+          throw new Error(`Failed to generate image for page ${index + 1}: ${error.message}`);
+        });
+      } else {
+        // Gemini-2.5-flash-image-preview model using generateContent
+        const imagePrompt = `Generate an image based on this description: ${page.imagePrompt}. Please create a detailed visual representation in ${stylePrompt} style.`;
         
-        const generatedImage = response.generatedImages[0];
-        if (!generatedImage || !generatedImage.image || !generatedImage.image.imageBytes) {
-          throw new Error(`Failed to generate image for page ${index + 1}: Invalid image data structure`);
-        }
-        
-        return {
-          pageNumber: index + 1,
-          text: page.pageText,
-          imageUrl: `data:image/jpeg;base64,${generatedImage.image.imageBytes}`,
-        };
-      }).catch(error => {
-        console.error(`Error generating image for page ${index + 1}:`, error);
-        // Return a placeholder or retry logic could be added here
-        throw new Error(`Failed to generate image for page ${index + 1}: ${error.message}`);
-      });
+        return ai.models.generateContent({
+          model: 'gemini-2.5-flash-image-preview',
+          contents: {
+            parts: [{ text: imagePrompt }]
+          },
+        }).then(response => {
+          // Handle Gemini response structure for image generation
+          if (!response || !response.candidates || response.candidates.length === 0) {
+            throw new Error(`Failed to generate image for page ${index + 1}: No candidates returned`);
+          }
+          
+          const candidate = response.candidates[0];
+          if (!candidate || !candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {
+            throw new Error(`Failed to generate image for page ${index + 1}: Invalid candidate structure`);
+          }
+          
+          // Look for image data in the response parts
+          const imagePart = candidate.content.parts.find(part => part.inlineData && part.inlineData.mimeType && part.inlineData.mimeType.startsWith('image/'));
+          if (!imagePart || !imagePart.inlineData || !imagePart.inlineData.data) {
+            throw new Error(`Failed to generate image for page ${index + 1}: No image data found in response`);
+          }
+          
+          return {
+            pageNumber: index + 1,
+            text: page.pageText,
+            imageUrl: `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`,
+          };
+        }).catch(error => {
+          console.error(`Error generating image for page ${index + 1}:`, error);
+          throw new Error(`Failed to generate image for page ${index + 1}: ${error.message}`);
+        });
+      }
     });
 
     const comicPages = await Promise.all(imageGenerationPromises);
