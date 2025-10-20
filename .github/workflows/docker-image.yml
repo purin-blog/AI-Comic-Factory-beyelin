@@ -1,0 +1,36 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "main" ]
+    tags:
+      - 'v*'  # 当推送 v 开头的标签时触发
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Build the Docker image
+      run: docker build . --file Dockerfile --tag AI-Comic-Factory-beyelin:latest
+    
+    - name: Save Docker image
+      run: docker save AI-Comic-Factory-beyelin:latest | gzip > AI-Comic-Factory-beyelin.tar.gz
+    
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: AI-Comic-Factory-beyelin
+        path: AI-Comic-Factory-beyelin.tar.gz
+        compression-level: 0
+    
+    # 🆕 仅在推送标签时创建 Release
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: AI-Comic-Factory-beyelin.tar.gz
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
