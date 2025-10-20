@@ -14,16 +14,16 @@ jobs:
     - uses: actions/checkout@v4
     
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag AI-Comic-Factory-beyelin:latest
+      run: docker build . --file Dockerfile --tag ai-comic-factory-beyelin:latest
     
     - name: Save Docker image
-      run: docker save AI-Comic-Factory-beyelin:latest | gzip > AI-Comic-Factory-beyelin.tar.gz
+      run: docker save ai-comic-factory-beyelin:latest | gzip > ai-comic-factory-beyelin.tar.gz
     
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: AI-Comic-Factory-beyelin
-        path: AI-Comic-Factory-beyelin.tar.gz
+        name: ai-comic-factory-beyelin
+        path: ai-comic-factory-beyelin.tar.gz
         compression-level: 0
     
     # 🆕 仅在推送标签时创建 Release
@@ -31,6 +31,6 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v1
       with:
-        files: AI-Comic-Factory-beyelin.tar.gz
+        files: ai-comic-factory-beyelin.tar.gz
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
